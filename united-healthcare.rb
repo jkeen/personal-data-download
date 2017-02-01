@@ -39,9 +39,9 @@ class UnitedHealthCare
           default_directory: @tmp_folder
         }
       }
+      clean_up
 
       Capybara::Selenium::Driver.new(app, :browser => :chrome, prefs: prefs)
-      clean_up
     end
 
     Capybara.register_driver :poltergeist do |app|
