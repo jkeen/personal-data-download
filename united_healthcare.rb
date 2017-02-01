@@ -1,56 +1,18 @@
+require './scraper'
 
-require 'capybara'
-require 'capybara/dsl'
-require 'capybara/poltergeist'
-require 'selenium-webdriver'
-require 'csv'
-require 'tty'
-require 'pry'
+# Fetches plan documents, and the last 18 months worth of claims from united healthcare.
 
-class UnitedHealthCare
-  include Capybara::DSL
+# TODO: fetch account information (plan id, etc)
 
-  attr_accessor :data_folder, :tmp_folder, :download_folder
-
+class UnitedHealthCare < Scraper
   def initialize
     prompt = TTY::Prompt.new
-
     @username = prompt.ask("Username?", required: true)
     @password = prompt.ask("Password?", echo: false, required: true)
 
-    @data_folder = File.join(File.expand_path(File.dirname(__FILE__)), "unitedhealthcare", @username)
-    @tmp_folder  = File.join(@data_folder, "tmp");
-    @download_folder = File.join(@data_folder, "downloads")
-    Capybara.register_driver :chrome do |app|
-      prefs = {
-        plugins: {
-          plugins_disabled: ['Chrome PDF Viewer']
-        },
-        webkit: {
-          webprefs: {
-            web_security_enabled: false
-          }
-        },
-        'profile' => {
-         'default_content_setting_values' => {'automatic_downloads' => 1},
-         },
-        download: {
-          prompt_for_download: false,
-          default_directory: @tmp_folder
-        }
-      }
-      clean_up
+    super(File.join(File.expand_path(File.dirname(__FILE__)), "unitedhealthcare", @username))
 
-      Capybara::Selenium::Driver.new(app, :browser => :chrome, prefs: prefs)
-    end
-
-    Capybara.register_driver :poltergeist do |app|
-      profile = Selenium::WebDriver::Chrome::Profile.new
-      profile['download.default_directory'] = @download_folder
-
-      Capybara::Poltergeist::Driver.new(app, :window_size => [1920, 1080], :inspector => true, profile: profile, :debug => true)
-    end
-
+    # it would be nice if poltergeist worked, but it really stalls out on some iframes and I don't know why
     Capybara.javascript_driver = :chrome
     Capybara.current_driver = :chrome
   end
@@ -78,10 +40,6 @@ class UnitedHealthCare
     path = "#{@data_folder}/logs/#{@step}-#{message.gsub(/\s/, '-')}.png"
     save_screenshot(path)
     @step = @step + 1
-  end
-
-  def clean_up
-    FileUtils.rm_r(@tmp_folder) if File.exist?(@tmp_folder)
   end
 
   def login
@@ -137,7 +95,11 @@ class UnitedHealthCare
 
   def save_file(tmp_path, good_name)
     FileUtils.rm("#{@download_folder}/#{good_name}.pdf") if File.exist?("#{@download_folder}/#{good_name}.pdf")
-    FileUtils.copy_file(tmp_path, "#{@download_folder}/#{good_name}")
+
+    saved_path = "#{@download_folder}/#{good_name}"
+    FileUtils.copy_file(tmp_path, saved_path)
+
+    saved_path
   end
 
   def gather_plan_info
@@ -145,15 +107,12 @@ class UnitedHealthCare
     values = {}
     headers = all('.claim_summary_tb th')
     rows = all('.claim_summary_tb tbody tr').each do |row, index|
-
       cells = row.find('td')
 
       headers.each do |header|
         values[header.text] = cells[index].text
       end
     end
-
-    puts values
   end
 
   def needs_authorization?

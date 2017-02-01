@@ -6,12 +6,11 @@ require 'selenium-webdriver'
 require 'csv'
 require 'tty'
 require 'pry'
-require './collector'
 
 class Scraper
   include Capybara::DSL
 
-  attr_accessor :data_folder, :collector
+  attr_accessor :data_folder
 
   def initialize(data_folder = "")
     @data_folder      = data_folder
@@ -20,6 +19,11 @@ class Scraper
     @log_folder       = File.join(data_folder, 'logs')
 
     Capybara.register_driver :chrome do |app|
+      # We want PDFs to download without prompts, so we
+      # need to tell chrome to disable its PDF viewer,
+      # not prompt for downloads, and also allow automatic multiple
+      # downloads from sites.
+
       prefs = {
         plugins: {
           plugins_disabled: ['Chrome PDF Viewer']
@@ -49,17 +53,9 @@ class Scraper
 
     Capybara.javascript_driver = :chrome
     Capybara.current_driver = :chrome
-
-    @collector = Collector.new("#{@data_folder}/data.json")
-  end
-
-  def session
-    Capybara.current_session
   end
 
   def clean_up
     FileUtils.rm_r(@tmp_folder) if File.exist?(@tmp_folder)
   end
-
-
 end
