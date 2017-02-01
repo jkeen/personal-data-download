@@ -1,0 +1,16 @@
+# A sample Gemfile
+source "https://rubygems.org"
+
+gem "capybara"
+gem "tty"
+gem "tty-prompt"
+gem "tty-file"
+gem "pastel"
+gem "selenium-webdriver"
+gem "poltergeist"
+gem "capybara-screenshot"
+gem "pry"
+gem "pry-byebug"
+gem "byebug"
+gem "launchy"
+gem "hashie"
